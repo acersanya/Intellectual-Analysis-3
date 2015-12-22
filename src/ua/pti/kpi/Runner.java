@@ -1,4 +1,5 @@
 package ua.pti.kpi;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -9,36 +10,35 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import com.google.common.base.Splitter;
 
 public class Runner {
-	
+
 	public static final String DICTIONARY_PATH = "/home/acersanya/Documents/Intelecual/stopwords_dictionary.txt";
 	public static final String TEXT_PATH = "/home/acersanya/Documents/Intelecual/text.txt";
 	public static final String OUTPUT_FILE = "/home/acersanya/Documents/Intelecual/output.txt";
 	public static String[] dictionary = ReadDictionary(DICTIONARY_PATH).toString().split(" ");
-	
-	
-	static <K,V extends Comparable<? super V>>
-	SortedSet<Map.Entry<K,V>> entriesSortedByValues(Map<K,V> map) {
-	    SortedSet<Map.Entry<K,V>> sortedEntries = new TreeSet<Map.Entry<K,V>>(
-	        new Comparator<Map.Entry<K,V>>() {
-	            @Override public int compare(Map.Entry<K,V> e1, Map.Entry<K,V> e2) {
-	                int res = e1.getValue().compareTo(e2.getValue());
-	                return res != 0 ? res : 1;
-	            }
-	        }
-	    );
-	    sortedEntries.addAll(map.entrySet());
-	    return sortedEntries;
+
+	static <K, V extends Comparable<? super V>> SortedSet<Map.Entry<K, V>> entriesSortedByValues(Map<K, V> map) {
+		SortedSet<Map.Entry<K, V>> sortedEntries = new TreeSet<Map.Entry<K, V>>(new Comparator<Map.Entry<K, V>>() {
+			@Override
+			public int compare(Map.Entry<K, V> e1, Map.Entry<K, V> e2) {
+				int res = e1.getValue().compareTo(e2.getValue());
+				return res != 0 ? res : 1;
+			}
+		});
+		sortedEntries.addAll(map.entrySet());
+		return sortedEntries;
 	}
-	
 
 	public static StringBuilder Reader(String path) {
 
@@ -79,7 +79,7 @@ public class Runner {
 	}
 
 	public static ArrayList<String> threeGram(String input) {
-		System.out.println(input);
+
 		ArrayList<String> list = new ArrayList<>();
 		String[] split = input.split(" ");
 		StringBuilder temp = null;
@@ -95,6 +95,39 @@ public class Runner {
 		return list;
 	}
 
+	public static ArrayList<String> bigram(String input) {
+
+		ArrayList<String> list = new ArrayList<>();
+		String[] split = input.split(" ");
+		StringBuilder temp = null;
+		for (int i = 0; i < split.length - 1; i++) {
+			temp = new StringBuilder();
+			temp.append(split[i] + " ");
+			temp.append(split[i + 1]);
+			if (improveStopDictionaryBigram(dictionary, temp.toString())) {
+				list.add(temp.toString());
+			}
+		}
+		return list;
+	}
+
+	public static ArrayList<String> monogram(String input) {
+
+		ArrayList<String> list = new ArrayList<>();
+		String[] split = input.split(" ");
+		StringBuilder temp = null;
+		for (int i = 0; i < split.length; i++) {
+			temp = new StringBuilder();
+			temp.append(split[i]);
+			if (stopDictMono(dictionary, temp.toString())) {
+				list.add(temp.toString());
+			}
+		}
+		return list;
+	}
+
+	
+	
 	public static void groupThreeGramms(ArrayList<String> threeGramms) {
 		Collections.sort(threeGramms, new Comparator<String>() {
 			@Override
@@ -128,31 +161,48 @@ public class Runner {
 		return result.toString();
 	}
 
+	public static boolean stopDictMono(String[] dictionary, String text) {
+		ArrayList<String> tempList = new ArrayList<>();
+		for (String i : dictionary) {
+			tempList.add(i);
+		}
+
+		if (tempList.contains(text)) {
+			return false;
+		}
+		return true;
+
+	}
+
+	public static boolean improveStopDictionaryBigram(String[] dictionary, String text) {
+
+		String[] temp = text.split(" ");
+
+		ArrayList<String> tempList = new ArrayList<>();
+		for (String i : dictionary) {
+			tempList.add(i);
+		}
+
+		if (tempList.contains(temp[0]) || (tempList.contains(temp[1]))) {
+			return false;
+		} else {
+			return true;
+		}
+
+	}
+
 	public static boolean improveStopDictionary(String[] dictionary, String text) {
 
 		String[] temp = text.split(" ");
-		
+
 		ArrayList<String> tempList = new ArrayList<>();
-		for(String i : dictionary){
+		for (String i : dictionary) {
 			tempList.add(i);
 		}
-		
-		if(!tempList.contains(temp[0]) && (!tempList.contains(temp[1])  && (!tempList.contains(temp[2])))){
-			return true;
-		}
-		
 
-		for (int i = 0; i < dictionary.length; i++) {
-			if (dictionary[i].equals(temp[0])) {
-				return false;
-			}
-			for (int j = 0; j < dictionary.length; j++) {
-				if (dictionary[j].equals(temp[2])) {
-					return false;
-				}
-			}
+		if (tempList.contains(temp[0]) || (tempList.contains(temp[2]))) {
+			return false;
 		}
-
 		return true;
 	}
 
@@ -196,7 +246,6 @@ public class Runner {
 	public static void computeAll(String path) {
 
 		String result = formater(Reader(path));
-		System.out.println(result.length());
 
 		// Split on parts our text
 		ArrayList<String> documentParts = splitOnParts(result);
@@ -236,23 +285,28 @@ public class Runner {
 		}
 	}
 
-	public static void writer(ArrayList<Map<String, Double>> map) {
-		Map<String, Double> sortedMap = new TreeMap<String, Double>();
-		
-		
+	public static void writer(ArrayList<Map<String, Double>> input) {
 
-		
-		
-		
+		Map<String, Double> general = new HashMap<>();
+
+		for (Map<String, Double> i : input) {
+			for (Map.Entry e : i.entrySet())
+				if (!general.containsKey(e.getKey())) {
+					general.put((String) e.getKey(), (Double) e.getValue());
+				}
+		}
+
+		LinkedHashMap<String, Double> s = general.entrySet().stream().sorted(Entry.comparingByValue())
+				.collect(Collectors.toMap(Entry::getKey, Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+
 		try {
 			File fileOne = new File(OUTPUT_FILE);
 			FileOutputStream fos = new FileOutputStream(fileOne);
 			ObjectOutputStream oos = new ObjectOutputStream(fos);
-			for(int i=0;i<map.size();i++ ){
-				for(Map.Entry<String, Double> entry: map.get(i).entrySet()){
-				oos.writeObject(entry.toString()+"\n");
-				}
-				
+
+			for (Map.Entry<String, Double> entry : s.entrySet()) {
+				oos.writeObject(entry.toString() + "\n");
+
 			}
 			oos.flush();
 			oos.close();
